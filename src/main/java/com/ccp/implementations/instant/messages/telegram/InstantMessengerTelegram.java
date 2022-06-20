@@ -9,7 +9,6 @@ import java.util.function.Predicate;
 import com.ccp.constantes.CcpConstants;
 import com.ccp.decorators.CcpMapDecorator;
 import com.ccp.dependency.injection.CcpEspecification;
-import com.ccp.dependency.injection.CcpImplementation;
 import com.ccp.especifications.http.CcpHttpHandler;
 import com.ccp.especifications.http.CcpHttpRequester;
 import com.ccp.especifications.http.CcpHttpResponseType;
@@ -17,8 +16,7 @@ import com.ccp.especifications.instant.messenger.CcpInstantMessenger;
 import com.ccp.exceptions.http.UnexpectedHttpStatus;
 import com.ccp.utils.Utils;
 
-@CcpImplementation
-public class CcpInstantMessengerTelegram implements CcpInstantMessenger {
+class InstantMessengerTelegram implements CcpInstantMessenger {
 	@CcpEspecification
 	private CcpHttpRequester ccpHttp;
 	private Set<Long> locks = Collections.synchronizedSet(new HashSet<>());
