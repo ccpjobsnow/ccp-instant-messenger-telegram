@@ -8,7 +8,7 @@ import java.util.function.Predicate;
 
 import com.ccp.constantes.CcpConstants;
 import com.ccp.decorators.CcpMapDecorator;
-import com.ccp.dependency.injection.CcpEspecification;
+import com.ccp.dependency.injection.CcpSpecification;
 import com.ccp.especifications.http.CcpHttpHandler;
 import com.ccp.especifications.http.CcpHttpRequester;
 import com.ccp.especifications.http.CcpHttpResponseType;
@@ -17,7 +17,7 @@ import com.ccp.exceptions.http.UnexpectedHttpStatus;
 import com.ccp.utils.Utils;
 
 class InstantMessengerTelegram implements CcpInstantMessenger {
-	@CcpEspecification
+	@CcpSpecification
 	private CcpHttpRequester ccpHttp;
 	private Set<Long> locks = Collections.synchronizedSet(new HashSet<>());
 
@@ -26,13 +26,13 @@ class InstantMessengerTelegram implements CcpInstantMessenger {
 		Long supportTelegram = Long.valueOf(System.getenv("SUPPORT_TELEGRAM"));
 		long naoResponderPraNinguem = 0L;
 
-		this.sendMessage(botToken, message, supportTelegram, naoResponderPraNinguem, CcpConstants.doNotEvaluate, CcpConstants.byPass);
+		this.sendMessage(botToken, message, supportTelegram, naoResponderPraNinguem, CcpConstants.TO_DISCARD, CcpConstants.EXECUTE_NOTHING);
 	}
 
 	@Override
 	public Long getMembersCount(String botToken, Long chatId) {
 		String url = this.getBotToken(botToken);
-		this.ccpHttp.executeHttpRequest(url + "/getChatMemberCount?chat_id=" + chatId, "GET", CcpConstants.emptyJson, "");
+		this.ccpHttp.executeHttpRequest(url + "/getChatMemberCount?chat_id=" + chatId, "GET", CcpConstants.EMPTY_JSON, "");
 		CcpHttpHandler ccpHttpHandler = new CcpHttpHandler(200, this.ccpHttp);
 		try {
 			CcpMapDecorator response = ccpHttpHandler.executeHttpSimplifiedGet(url, CcpHttpResponseType.singleRecord);
