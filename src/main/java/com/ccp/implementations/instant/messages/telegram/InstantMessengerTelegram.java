@@ -8,7 +8,8 @@ import java.util.function.Predicate;
 
 import com.ccp.constantes.CcpConstants;
 import com.ccp.decorators.CcpMapDecorator;
-import com.ccp.dependency.injection.CcpSpecification;
+import com.ccp.dependency.injection.CcpDependencyInject;
+import com.ccp.especifications.email.CcpEmailSender;
 import com.ccp.especifications.http.CcpHttpHandler;
 import com.ccp.especifications.http.CcpHttpRequester;
 import com.ccp.especifications.http.CcpHttpResponseType;
@@ -17,15 +18,25 @@ import com.ccp.exceptions.http.UnexpectedHttpStatus;
 import com.ccp.utils.Utils;
 
 class InstantMessengerTelegram implements CcpInstantMessenger {
-	@CcpSpecification
+	
+	@CcpDependencyInject
 	private CcpHttpRequester ccpHttp;
+	
+	@CcpDependencyInject
+	private CcpEmailSender emailSender;
+	
 	private Set<Long> locks = Collections.synchronizedSet(new HashSet<>());
 
 	@Override
-	public void sendMessageToSupport(String botToken, String message) {
-		Long supportTelegram = Long.valueOf(System.getenv("SUPPORT_TELEGRAM"));
-		long naoResponderPraNinguem = 0L;
+	public void sendMessageToSupport(CcpMapDecorator parameters, String message) {
+		Long supportTelegram = parameters.getAsLongNumber("supportTelegram");
+		String botToken = parameters.getAsString("botToken");
+		String subject = parameters.getAsString("subject");
+		String emailTo = parameters.getAsString("emailTo");
 
+		this.emailSender.send(subject, emailTo, message);
+		
+		long naoResponderPraNinguem = 0L;
 		this.sendMessage(botToken, message, supportTelegram, naoResponderPraNinguem, CcpConstants.TO_DISCARD, CcpConstants.EXECUTE_NOTHING);
 	}
 
