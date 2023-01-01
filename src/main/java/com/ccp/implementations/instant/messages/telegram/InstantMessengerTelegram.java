@@ -16,7 +16,11 @@ class InstantMessengerTelegram implements CcpInstantMessenger {
 	private CcpHttpRequester ccpHttp;
 	
 	@Override
-	public Long getMembersCount(String botToken, Long chatId) {
+	public Long getMembersCount(CcpMapDecorator parameters) {
+
+		String botToken = parameters.getAsString("botToken");
+		Long chatId = parameters.getAsLongNumber("chatId");
+
 		String url = this.getBotToken(botToken);
 		this.ccpHttp.executeHttpRequest(url + "/getChatMemberCount?chat_id=" + chatId, "GET", CcpConstants.EMPTY_JSON, "");
 		CcpHttpHandler ccpHttpHandler = new CcpHttpHandler(200, this.ccpHttp);
@@ -42,7 +46,13 @@ class InstantMessengerTelegram implements CcpInstantMessenger {
 
 
 	@Override
-	public Long sendMessage(String botToken, String message, Long chatId, Long replyTo) {
+	public Long sendMessage(CcpMapDecorator parameters) {
+	
+		Long replyTo = parameters.containsAllKeys("replyTo") ? parameters.getAsLongNumber("replyTo") : 0L;
+		String botToken = parameters.getAsString("botToken");
+		String message = parameters.getAsString("message");
+		Long chatId = parameters.getAsLongNumber("chatId");
+
 		if(message.trim().isEmpty()) {
 			return 0L;
 		}
@@ -91,14 +101,19 @@ class InstantMessengerTelegram implements CcpInstantMessenger {
 
 
 	@Override
-	public String getFileName(String botToken, CcpMapDecorator messageData) {
-		// TODO Auto-generated method stub
+	public String getFileName(CcpMapDecorator parameters) {
+		
+//		CcpMapDecorator messageData = parameters.getInternalMap("messageData");
+//		String botToken = parameters.getAsString("botToken");
+		
 		return null;
 	}
 
 	@Override
-	public String extractTextFromMessage(String botToken, CcpMapDecorator messageData) {
-		// TODO Auto-generated method stub
+	public String extractTextFromMessage(CcpMapDecorator parameters) {
+//		CcpMapDecorator messageData = parameters.getInternalMap("messageData");
+//		String botToken = parameters.getAsString("botToken");
+
 		return null;
 	}
 
