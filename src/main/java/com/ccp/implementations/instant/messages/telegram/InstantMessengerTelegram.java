@@ -1,45 +1,20 @@
 package com.ccp.implementations.instant.messages.telegram;
 
-import java.util.Collections;
-import java.util.HashSet;
-import java.util.Set;
-import java.util.function.Consumer;
-import java.util.function.Predicate;
-
 import com.ccp.constantes.CcpConstants;
 import com.ccp.decorators.CcpMapDecorator;
 import com.ccp.dependency.injection.CcpDependencyInject;
-import com.ccp.especifications.email.CcpEmailSender;
 import com.ccp.especifications.http.CcpHttpHandler;
 import com.ccp.especifications.http.CcpHttpRequester;
 import com.ccp.especifications.http.CcpHttpResponseType;
 import com.ccp.especifications.instant.messenger.CcpInstantMessenger;
 import com.ccp.exceptions.http.UnexpectedHttpStatus;
-import com.ccp.utils.Utils;
+import com.ccp.process.ThrowException;
 
 class InstantMessengerTelegram implements CcpInstantMessenger {
 	
 	@CcpDependencyInject
 	private CcpHttpRequester ccpHttp;
 	
-	@CcpDependencyInject
-	private CcpEmailSender emailSender;
-	
-	private Set<Long> locks = Collections.synchronizedSet(new HashSet<>());
-
-	@Override
-	public void sendMessageToSupport(CcpMapDecorator parameters, String message) {
-		Long supportTelegram = parameters.getAsLongNumber("supportTelegram");
-		String botToken = parameters.getAsString("botToken");
-		String subject = parameters.getAsString("subject");
-		String emailTo = parameters.getAsString("emailTo");
-
-		this.emailSender.send(subject, emailTo, message);
-		
-		long naoResponderPraNinguem = 0L;
-		this.sendMessage(botToken, message, supportTelegram, naoResponderPraNinguem, CcpConstants.TO_DISCARD, CcpConstants.EXECUTE_NOTHING);
-	}
-
 	@Override
 	public Long getMembersCount(String botToken, Long chatId) {
 		String url = this.getBotToken(botToken);
@@ -65,60 +40,55 @@ class InstantMessengerTelegram implements CcpInstantMessenger {
 		return url;
 	}
 
-	@Override
-	public Long sendSlowlyMessage(String botToken, String message, Long chatId, Long replyTo, Predicate<String> isLockedUser, Consumer<String> lockUser) {
-		
-		while(this.locks.contains(chatId)) {
-			Utils.sleep(1);
-		}
-		
-		long firstTime = System.currentTimeMillis();
-		this.locks.add(chatId);
-		Long sendMessage = this.sendMessage(botToken, message, chatId, replyTo, isLockedUser, lockUser);
-		Utils.sleep(3000 - (int)(System.currentTimeMillis() - firstTime));
-		return sendMessage;
-	}
 
 	@Override
-	public Long sendMessage(String botToken, String message, Long chatId, Long replyTo, Predicate<String> isLockedUser, Consumer<String> lockUser) {
+	public Long sendMessage(String botToken, String message, Long chatId, Long replyTo) {
 		if(message.trim().isEmpty()) {
 			return 0L;
 		}
-		String id = botToken + "_" + chatId;
 
-		if(isLockedUser.test(id)) {
-			return 0L;
-		}
 		String mensagem = message.replace("<p>", "\n").replace("</p>", " ").replace(",<br/>", " ");
 		
 		if(mensagem.length() > 4096) {
 			mensagem = mensagem.substring(0, 4096);
 		}
 		
-		String url = this.getBotToken(botToken)
-				+ "/sendMessage";
-		CcpHttpHandler ccpHttpHandler = new CcpHttpHandler(200, this.ccpHttp);
+		String url = this.getBotToken(botToken)	+ "/sendMessage";
+		
+		CcpMapDecorator handlers = new CcpMapDecorator()
+				.put("403", new ThrowException(new ThisBotWasBlockedByThisUser()))
+				.put("429", new ThrowException(new TooManyRequests()))
+				.put("200", CcpConstants.DO_NOTHING)
+				;
+		
+		CcpHttpHandler ccpHttpHandler = new CcpHttpHandler(handlers, this.ccpHttp);
+		
 		CcpMapDecorator body = new CcpMapDecorator()
 		.put("reply_to_message_id", replyTo)
 		.put("parse_mode", "html")
 		.put("chat_id", chatId)
 		.put("text", mensagem);
-		CcpMapDecorator response = ccpHttpHandler.executeHttpRequest(url, "POST", new CcpMapDecorator(), body, CcpHttpResponseType.singleRecord);
+		CcpMapDecorator response;
+		
+		try {
+			response = ccpHttpHandler.executeHttpRequest(url, "POST", new CcpMapDecorator(), body, CcpHttpResponseType.singleRecord);
 
-		boolean ok = response.getAsBoolean("ok");
-		if(ok) {
-			Long newMessageId = response.getInternalMap("result").getAsLongNumber("message_id");
+			boolean nOk = response.getAsBoolean("ok") == false;
+			
+			if(nOk) {
+				throw new InstantMessageApiIsUnavailable();
+			}
+
+			CcpMapDecorator result = response.getInternalMap("result");
+			
+			Long newMessageId = result.getAsLongNumber("message_id");
 			
 			return newMessageId;
+		} catch (UnexpectedHttpStatus e) {
+			throw new InstantMessageApiIsUnavailable();
 		}
-		Integer errorCode = response.getAsIntegerNumber("error_code");
-		boolean esteBotFoiBloqueado = Integer.valueOf(403).equals(errorCode);
-		if(esteBotFoiBloqueado) {
-			lockUser.accept(id);
-		}
-		return 0L;
-		
 	}
+
 
 	@Override
 	public String getFileName(String botToken, CcpMapDecorator messageData) {
