@@ -1,4 +1,4 @@
-package com.ccp.implementations.instant.messages.telegram;
+package com.ccp.implementations.instant.messenger.telegram;
 
 import com.ccp.dependency.injection.CcpModuleExporter;;
 

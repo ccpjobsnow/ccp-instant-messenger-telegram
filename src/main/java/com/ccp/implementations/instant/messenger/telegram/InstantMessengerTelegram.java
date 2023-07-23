@@ -1,4 +1,4 @@
-package com.ccp.implementations.instant.messages.telegram;
+package com.ccp.implementations.instant.messenger.telegram;
 
 import com.ccp.constantes.CcpConstants;
 import com.ccp.decorators.CcpMapDecorator;
