@@ -2,15 +2,25 @@ package com.ccp.implementations.instant.messenger.telegram;
 
 import com.ccp.constantes.CcpConstants;
 import com.ccp.decorators.CcpMapDecorator;
+import com.ccp.decorators.CcpStringDecorator;
 import com.ccp.dependency.injection.CcpDependencyInject;
 import com.ccp.especifications.http.CcpHttpHandler;
 import com.ccp.especifications.http.CcpHttpRequester;
 import com.ccp.especifications.http.CcpHttpResponseType;
 import com.ccp.especifications.instant.messenger.CcpInstantMessenger;
 import com.ccp.exceptions.http.UnexpectedHttpStatus;
+import com.ccp.exceptions.instant.messenger.InstantMessageApiIsUnavailable;
+import com.ccp.exceptions.instant.messenger.ThisBotWasBlockedByThisUser;
+import com.ccp.exceptions.instant.messenger.TooManyRequests;
 import com.ccp.process.ThrowException;
 
 class InstantMessengerTelegram implements CcpInstantMessenger {
+	
+	private CcpMapDecorator properties;
+
+	public InstantMessengerTelegram() {
+		this.properties = new CcpStringDecorator("application.properties").propertiesFileFromClassLoader();
+	}
 	
 	@CcpDependencyInject
 	private CcpHttpRequester ccpHttp;
@@ -18,10 +28,9 @@ class InstantMessengerTelegram implements CcpInstantMessenger {
 	@Override
 	public Long getMembersCount(CcpMapDecorator parameters) {
 
-		String botToken = parameters.getAsString("botToken");
 		Long chatId = parameters.getAsLongNumber("chatId");
-
-		String url = this.getBotToken(botToken);
+		String botType = parameters.getAsString("botType");
+		String url = this.getBotToken(botType);
 		this.ccpHttp.executeHttpRequest(url + "/getChatMemberCount?chat_id=" + chatId, "GET", CcpConstants.EMPTY_JSON, "");
 		CcpHttpHandler ccpHttpHandler = new CcpHttpHandler(200, this.ccpHttp);
 		try {
@@ -39,7 +48,18 @@ class InstantMessengerTelegram implements CcpInstantMessenger {
 		
 	}
 
-	private String getBotToken(String botToken) {
+	private String getBotToken(String botType) {
+		
+		if(botType.trim().isEmpty()) {
+			throw new RuntimeException("The parameter 'botType' is missing");
+		}
+		
+		String botToken = this.properties.getAsString("telegramBotToken" + botType);
+		
+		if(botToken.trim().isEmpty()) {
+			throw new RuntimeException("The property 'botToken' is missing");
+		}
+		
 		String url = "https://api.telegram.org/bot" + botToken;
 		return url;
 	}
@@ -48,10 +68,11 @@ class InstantMessengerTelegram implements CcpInstantMessenger {
 	@Override
 	public Long sendMessage(CcpMapDecorator parameters) {
 	
-		Long replyTo = parameters.containsAllKeys("replyTo") ? parameters.getAsLongNumber("replyTo") : 0L;
-		String botToken = parameters.getAsString("botToken");
-		String message = parameters.getAsString("message");
 		Long chatId = parameters.getAsLongNumber("chatId");
+		
+		
+		String message = parameters.getAsString("message");
+		Long replyTo = parameters.containsAllKeys("replyTo") ? parameters.getAsLongNumber("replyTo") : 0L;
 
 		if(message.trim().isEmpty()) {
 			return 0L;
@@ -62,8 +83,10 @@ class InstantMessengerTelegram implements CcpInstantMessenger {
 		if(mensagem.length() > 4096) {
 			mensagem = mensagem.substring(0, 4096);
 		}
-		
-		String url = this.getBotToken(botToken)	+ "/sendMessage";
+		String botType = parameters.getAsString("botType");
+
+		String botToken = this.getBotToken(botType);
+		String url = botToken + "/sendMessage";
 		
 		CcpMapDecorator handlers = new CcpMapDecorator()
 				.put("403", new ThrowException(new ThisBotWasBlockedByThisUser()))
