@@ -8,8 +8,8 @@ import com.ccp.especifications.http.CcpHttpHandler;
 import com.ccp.especifications.http.CcpHttpRequester;
 import com.ccp.especifications.http.CcpHttpResponseType;
 import com.ccp.especifications.instant.messenger.CcpInstantMessenger;
-import com.ccp.exceptions.http.UnexpectedHttpStatus;
-import com.ccp.exceptions.instant.messenger.InstantMessageApiIsUnavailable;
+import com.ccp.exceptions.http.CcpHttpInternalServerError;
+import com.ccp.exceptions.http.CcpHttpUnexpectedStatus;
 import com.ccp.exceptions.instant.messenger.ThisBotWasBlockedByThisUser;
 import com.ccp.exceptions.instant.messenger.TooManyRequests;
 import com.ccp.process.ThrowException;
@@ -29,8 +29,8 @@ class InstantMessengerTelegram implements CcpInstantMessenger {
 	public Long getMembersCount(CcpMapDecorator parameters) {
 
 		Long chatId = parameters.getAsLongNumber("chatId");
-		String botType = parameters.getAsString("botType");
-		String url = this.getBotToken(botType);
+		String botTokenKey = parameters.getAsString("botTokenKey");
+		String url = this.getBotToken(botTokenKey);
 		this.ccpHttp.executeHttpRequest(url + "/getChatMemberCount?chat_id=" + chatId, "GET", CcpConstants.EMPTY_JSON, "");
 		CcpHttpHandler ccpHttpHandler = new CcpHttpHandler(200, this.ccpHttp);
 		try {
@@ -41,23 +41,23 @@ class InstantMessengerTelegram implements CcpInstantMessenger {
 			Long result = response.getAsLongNumber("result");
 			return result;
 			
-		} catch (UnexpectedHttpStatus e) {
+		} catch (CcpHttpUnexpectedStatus e) {
 			throw new RuntimeException("Erro ao contar membros do grupo " + chatId + ". Detalhes: " + e.response.httpResponse);
 		}
 		
 		
 	}
 
-	private String getBotToken(String botType) {
+	private String getBotToken(String botTokenKey) {
 		
-		if(botType.trim().isEmpty()) {
-			throw new RuntimeException("The parameter 'botType' is missing");
+		if(botTokenKey.trim().isEmpty()) {
+			throw new RuntimeException("The parameter 'botTokenKey' is missing");
 		}
 		
-		String botToken = this.properties.getAsString("telegramBotToken" + botType);
+		String botToken = this.properties.getAsString(botTokenKey);
 		
 		if(botToken.trim().isEmpty()) {
-			throw new RuntimeException("The property 'botToken' is missing");
+			throw new RuntimeException("The property '" + botTokenKey + "' is missing");
 		}
 		
 		String url = "https://api.telegram.org/bot" + botToken;
@@ -69,7 +69,6 @@ class InstantMessengerTelegram implements CcpInstantMessenger {
 	public Long sendMessage(CcpMapDecorator parameters) {
 	
 		Long chatId = parameters.getAsLongNumber("chatId");
-		
 		
 		String message = parameters.getAsString("message");
 		Long replyTo = parameters.containsAllKeys("replyTo") ? parameters.getAsLongNumber("replyTo") : 0L;
@@ -83,12 +82,13 @@ class InstantMessengerTelegram implements CcpInstantMessenger {
 		if(mensagem.length() > 4096) {
 			mensagem = mensagem.substring(0, 4096);
 		}
-		String botType = parameters.getAsString("botType");
+		String botTokenKey = parameters.getAsString("botTokenKey");
 
-		String botToken = this.getBotToken(botType);
+		String botToken = this.getBotToken(botTokenKey);
 		String url = botToken + "/sendMessage";
 		
 		CcpMapDecorator handlers = new CcpMapDecorator()
+				.put("404", new ThrowException(new RuntimeException("The botToken '" + botToken + "' from property '" + botTokenKey + "' is invalid!")))
 				.put("403", new ThrowException(new ThisBotWasBlockedByThisUser()))
 				.put("429", new ThrowException(new TooManyRequests()))
 				.put("200", CcpConstants.DO_NOTHING)
@@ -109,7 +109,7 @@ class InstantMessengerTelegram implements CcpInstantMessenger {
 			boolean nOk = response.getAsBoolean("ok") == false;
 			
 			if(nOk) {
-				throw new InstantMessageApiIsUnavailable();
+				throw new CcpHttpInternalServerError();
 			}
 
 			CcpMapDecorator result = response.getInternalMap("result");
@@ -117,8 +117,11 @@ class InstantMessengerTelegram implements CcpInstantMessenger {
 			Long newMessageId = result.getAsLongNumber("message_id");
 			
 			return newMessageId;
-		} catch (UnexpectedHttpStatus e) {
-			throw new InstantMessageApiIsUnavailable();
+		} catch (CcpHttpUnexpectedStatus e) {
+			if(e.response.httpStatus > 500) {
+				throw new CcpHttpInternalServerError();
+			}
+			throw new RuntimeException(e);
 		}
 	}
 
