@@ -8,12 +8,13 @@ import com.ccp.especifications.http.CcpHttpHandler;
 import com.ccp.especifications.http.CcpHttpRequester;
 import com.ccp.especifications.http.CcpHttpResponseType;
 import com.ccp.especifications.instant.messenger.CcpInstantMessenger;
-import com.ccp.exceptions.http.CcpHttpServerError;
-import com.ccp.exceptions.http.CcpHttpUnexpectedStatus;
+import com.ccp.exceptions.http.CcpHttpError;
 import com.ccp.exceptions.instant.messenger.ThisBotWasBlockedByThisUser;
 import com.ccp.exceptions.instant.messenger.TooManyRequests;
 import com.ccp.process.ThrowException;
-
+enum X{
+	instantMessenger
+}
 class InstantMessengerTelegram implements CcpInstantMessenger {
 	
 	private CcpMapDecorator properties;
@@ -34,15 +35,15 @@ class InstantMessengerTelegram implements CcpInstantMessenger {
 		this.ccpHttp.executeHttpRequest(url + "/getChatMemberCount?chat_id=" + chatId, "GET", CcpConstants.EMPTY_JSON, "");
 		CcpHttpHandler ccpHttpHandler = new CcpHttpHandler(200, this.ccpHttp);
 		try {
-			CcpMapDecorator response = ccpHttpHandler.executeHttpSimplifiedGet(url, CcpHttpResponseType.singleRecord);
+			CcpMapDecorator response = ccpHttpHandler.executeHttpSimplifiedGet(url, CcpHttpResponseType.singleRecord, X.instantMessenger);
 			if(response.getAsBoolean("ok") == false) {
 				throw new RuntimeException("Erro ao contar membros do grupo " + chatId);
 			}
 			Long result = response.getAsLongNumber("result");
 			return result;
 			
-		} catch (CcpHttpUnexpectedStatus e) {
-			throw new RuntimeException("Erro ao contar membros do grupo " + chatId + ". Detalhes: " + e.response.httpResponse);
+		} catch (CcpHttpError e) {
+			throw new RuntimeException("Erro ao contar membros do grupo " + chatId + ". Detalhes: " + e.entity);
 		}
 		
 		
@@ -88,7 +89,6 @@ class InstantMessengerTelegram implements CcpInstantMessenger {
 		String url = botToken + "/sendMessage";
 		
 		CcpMapDecorator handlers = new CcpMapDecorator()
-				.put("404", new ThrowException(new RuntimeException("The botToken '" + botToken + "' from property '" + botTokenKey + "' is invalid!")))
 				.put("403", new ThrowException(new ThisBotWasBlockedByThisUser()))
 				.put("429", new ThrowException(new TooManyRequests()))
 				.put("200", CcpConstants.DO_NOTHING)
@@ -103,26 +103,19 @@ class InstantMessengerTelegram implements CcpInstantMessenger {
 		.put("text", mensagem);
 		CcpMapDecorator response;
 		
-		try {
-			response = ccpHttpHandler.executeHttpRequest(url, "POST", new CcpMapDecorator(), body, CcpHttpResponseType.singleRecord);
+		response = ccpHttpHandler.executeHttpRequest(url, "POST", new CcpMapDecorator(), body, CcpHttpResponseType.singleRecord, X.instantMessenger);
 
-			boolean nOk = response.getAsBoolean("ok") == false;
-			
-			if(nOk) {
-				throw new CcpHttpServerError();
-			}
-
-			CcpMapDecorator result = response.getInternalMap("result");
-			
-			Long newMessageId = result.getAsLongNumber("message_id");
-			
-			return newMessageId;
-		} catch (CcpHttpUnexpectedStatus e) {
-			if(e.response.httpStatus > 500) {
-				throw new CcpHttpServerError();
-			}
-			throw new RuntimeException(e);
+		boolean nOk = response.getAsBoolean("ok") == false;
+		
+		if(nOk) {
+//			throw new CcpHttpError(response, url, method, expectedStatusList);
 		}
+
+		CcpMapDecorator result = response.getInternalMap("result");
+		
+		Long newMessageId = result.getAsLongNumber("message_id");
+		
+		return newMessageId;
 	}
 
 
