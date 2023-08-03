@@ -8,7 +8,7 @@ import com.ccp.especifications.http.CcpHttpHandler;
 import com.ccp.especifications.http.CcpHttpRequester;
 import com.ccp.especifications.http.CcpHttpResponseType;
 import com.ccp.especifications.instant.messenger.CcpInstantMessenger;
-import com.ccp.exceptions.http.CcpHttpInternalServerError;
+import com.ccp.exceptions.http.CcpHttpServerError;
 import com.ccp.exceptions.http.CcpHttpUnexpectedStatus;
 import com.ccp.exceptions.instant.messenger.ThisBotWasBlockedByThisUser;
 import com.ccp.exceptions.instant.messenger.TooManyRequests;
@@ -109,7 +109,7 @@ class InstantMessengerTelegram implements CcpInstantMessenger {
 			boolean nOk = response.getAsBoolean("ok") == false;
 			
 			if(nOk) {
-				throw new CcpHttpInternalServerError();
+				throw new CcpHttpServerError();
 			}
 
 			CcpMapDecorator result = response.getInternalMap("result");
@@ -119,7 +119,7 @@ class InstantMessengerTelegram implements CcpInstantMessenger {
 			return newMessageId;
 		} catch (CcpHttpUnexpectedStatus e) {
 			if(e.response.httpStatus > 500) {
-				throw new CcpHttpInternalServerError();
+				throw new CcpHttpServerError();
 			}
 			throw new RuntimeException(e);
 		}
