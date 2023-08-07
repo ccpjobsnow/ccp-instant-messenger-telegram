@@ -70,8 +70,6 @@ class InstantMessengerTelegram implements CcpInstantMessenger {
 		return botToken;
 	}
 
-
-	@Override
 	public CcpMapDecorator sendMessage(CcpMapDecorator parameters) {
 	
 		Long chatId = parameters.getAsLongNumber("chatId");
