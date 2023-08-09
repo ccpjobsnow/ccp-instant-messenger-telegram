@@ -1,5 +1,8 @@
 package com.ccp.implementations.instant.messenger.telegram;
 
+import java.util.ArrayList;
+import java.util.List;
+
 import com.ccp.constantes.CcpConstants;
 import com.ccp.decorators.CcpMapDecorator;
 import com.ccp.decorators.CcpStringDecorator;
@@ -28,8 +31,7 @@ class InstantMessengerTelegram implements CcpInstantMessenger {
 	public Long getMembersCount(CcpMapDecorator parameters) {
 
 		Long chatId = parameters.getAsLongNumber("chatId");
-		String botTokenKey = parameters.getAsString("botTokenKey");
-		String url = this.getBotUrl(botTokenKey);
+		String url = this.getCompleteUrl(parameters);
 		this.ccpHttp.executeHttpRequest(url + "/getChatMemberCount?chat_id=" + chatId, "GET", CcpConstants.EMPTY_JSON, "");
 		CcpHttpHandler ccpHttpHandler = new CcpHttpHandler(200, this.ccpHttp);
 		try {
@@ -41,38 +43,24 @@ class InstantMessengerTelegram implements CcpInstantMessenger {
 			return result;
 			
 		} catch (CcpHttpError e) {
-			throw new RuntimeException("Erro ao contar membros do grupo " + chatId + ". Detalhes: " + e.entity);
+			throw new RuntimeException("Erro ao contar membros do grupo " + chatId + ". Detalhes: " + e.getMessage());
 		}
-		
-		
 	}
-
-	private String getBotUrl(String botTokenKey) {
-		
-		String botToken = this.getBotToken(botTokenKey);
-		
-		String url = "https://api.telegram.org/bot" + botToken;
-		return url;
+	void throwThisBotWasBlockedByThisUser(String token) {
+		throw new ThisBotWasBlockedByThisUser(token);
 	}
-
-	private String getBotToken(String botTokenKey) {
-		if(botTokenKey.trim().isEmpty()) {
-			throw new RuntimeException("The parameter 'botTokenKey' is missing");
-		}
-		
-		String botToken = this.properties.getAsString(botTokenKey);
-		
-		if(botToken.trim().isEmpty()) {
-			throw new RuntimeException("The property '" + botTokenKey + "' is missing");
-		}
-		return botToken;
-	}
-
-	public CcpMapDecorator sendMessage(CcpMapDecorator parameters) {
 	
-		Long chatId = parameters.getAsLongNumber("chatId");
+	void throwTooManyRequests() {
+		throw new TooManyRequests();
+	}
+	public CcpMapDecorator sendMessage(CcpMapDecorator parameters) {
+		String token = this.getToken(parameters);
+
+//		this.throwTooManyRequests();
+//		this.throwThisBotWasBlockedByThisUser(token);
+		Long chatId = parameters.getAsLongNumber("recipient");
 		
-		String message = parameters.getAsString("telegramMessage");
+		String message = parameters.getAsString("message");
 		Long replyTo = parameters.containsAllKeys("replyTo") ? parameters.getAsLongNumber("replyTo") : 0L;
 
 		if(message.trim().isEmpty()) {
@@ -80,44 +68,60 @@ class InstantMessengerTelegram implements CcpInstantMessenger {
 		}
 
 		String mensagem = message.replace("<p>", "\n").replace("</p>", " ").replace(",<br/>", " ");
+		List<String> texts = new ArrayList<>();
+		int length = mensagem.length();
+		int pieces = length / 4096;
 		
-		if(mensagem.length() > 4096) {
-			mensagem = mensagem.substring(0, 4096);
+		for(int k = 0; k <= pieces; k++) {
+			int nextBound = (k + 1) * 4096;
+			int currentBound = k * 4096;
+			String text = mensagem.substring(currentBound, nextBound > length ? length : nextBound);
+			texts.add(text);
 		}
-		String botTokenKey = parameters.getAsString("botTokenKey");
-
-		String botUrl = this.getBotUrl(botTokenKey);
+		String botUrl = this.getCompleteUrl(parameters);
 		String url = botUrl + "/sendMessage";
+		String method = parameters.getAsString("method");
 		
 		CcpMapDecorator handlers = new CcpMapDecorator()
-				.put("403", new ThrowException(new ThisBotWasBlockedByThisUser()))
+				.put("403", new ThrowException(new ThisBotWasBlockedByThisUser(token)))
 				.put("429", new ThrowException(new TooManyRequests()))
 				.put("200", CcpConstants.DO_NOTHING)
 				;
 		
 		CcpHttpHandler ccpHttpHandler = new CcpHttpHandler(handlers, this.ccpHttp);
 		
-		CcpMapDecorator body = new CcpMapDecorator()
-		.put("reply_to_message_id", replyTo)
-		.put("parse_mode", "html")
-		.put("chat_id", chatId)
-		.put("text", mensagem);
-		CcpMapDecorator response;
-		
-		response = ccpHttpHandler.executeHttpRequest(url, "POST", new CcpMapDecorator(), body, CcpHttpResponseType.singleRecord);
-
-		boolean nOk = response.getAsBoolean("ok") == false;
-		
-		if(nOk) {
-//			throw new CcpHttpError(response, url, method, expectedStatusList);
+		for (String text : texts) {
+			CcpMapDecorator body = new CcpMapDecorator()
+					.put("reply_to_message_id", replyTo)
+					.put("parse_mode", "html")
+					.put("chat_id", chatId)
+					.put("text", text);
+			
+			CcpMapDecorator response = ccpHttpHandler.executeHttpRequest(url, method, new CcpMapDecorator(), body, CcpHttpResponseType.singleRecord);
+			
+			CcpMapDecorator result = response.getInternalMap("result");
+			
+			replyTo = result.getAsLongNumber("message_id");
 		}
+		
+		return new CcpMapDecorator().put("token", token);
+	}
 
-		CcpMapDecorator result = response.getInternalMap("result");
+
+	private String getCompleteUrl(CcpMapDecorator parameters) {
 		
-		Long newMessageId = result.getAsLongNumber("message_id");
+		String tokenValue = this.getToken(parameters);
 		
-		String botToken = this.getBotToken(botTokenKey);
-		return new CcpMapDecorator().put("newMessageId", newMessageId).put("botToken", botToken);
+		String urlKey = parameters.getAsString("url");
+		String urlValue = this.properties.getAsString(urlKey);
+		
+		return urlValue + tokenValue;
+	}
+
+	public String getToken(CcpMapDecorator parameters) {
+		String tokenKey = parameters.getAsString("token");
+		String tokenValue = this.properties.getAsString(tokenKey);
+		return tokenValue;
 	}
 
 
