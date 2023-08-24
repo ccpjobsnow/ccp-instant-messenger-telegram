@@ -1,11 +1,11 @@
 package com.ccp.implementations.instant.messenger.telegram;
 
-import com.ccp.dependency.injection.CcpModuleExporter;;
+import com.ccp.dependency.injection.CcpInstanceProvider;;
 
-public class InstantMessenger implements CcpModuleExporter {
+public class InstantMessenger implements CcpInstanceProvider {
 
 	@Override
-	public Object export() {
+	public Object getInstance() {
 		return new InstantMessengerTelegram();
 	}
 
