@@ -24,14 +24,13 @@ class InstantMessengerTelegram implements CcpInstantMessenger {
 		this.properties = new CcpStringDecorator("application.properties").propertiesFileFromClassLoader();
 	}
 	
-	private CcpHttpRequester ccpHttp = CcpInstanceInjection.getInstance(CcpHttpRequester.class);
-	
 	@Override
 	public Long getMembersCount(CcpMapDecorator parameters) {
+		CcpHttpRequester ccpHttp = CcpInstanceInjection.getInstance(CcpHttpRequester.class);
 
 		Long chatId = parameters.getAsLongNumber("chatId");
 		String url = this.getCompleteUrl(parameters);
-		this.ccpHttp.executeHttpRequest(url + "/getChatMemberCount?chat_id=" + chatId, "GET", CcpConstants.EMPTY_JSON, "");
+		ccpHttp.executeHttpRequest(url + "/getChatMemberCount?chat_id=" + chatId, "GET", CcpConstants.EMPTY_JSON, "");
 		CcpHttpHandler ccpHttpHandler = new CcpHttpHandler(200);
 		try {
 			CcpMapDecorator response = ccpHttpHandler.executeHttpSimplifiedGet(url, CcpHttpResponseType.singleRecord);
