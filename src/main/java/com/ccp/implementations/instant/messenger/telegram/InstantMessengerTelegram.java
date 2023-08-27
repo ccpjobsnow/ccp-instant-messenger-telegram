@@ -6,7 +6,7 @@ import java.util.List;
 import com.ccp.constantes.CcpConstants;
 import com.ccp.decorators.CcpMapDecorator;
 import com.ccp.decorators.CcpStringDecorator;
-import com.ccp.dependency.injection.CcpInstanceInjection;
+import com.ccp.dependency.injection.CcpDependencyInjection;
 import com.ccp.especifications.http.CcpHttpHandler;
 import com.ccp.especifications.http.CcpHttpRequester;
 import com.ccp.especifications.http.CcpHttpResponseType;
@@ -26,7 +26,7 @@ class InstantMessengerTelegram implements CcpInstantMessenger {
 	
 	@Override
 	public Long getMembersCount(CcpMapDecorator parameters) {
-		CcpHttpRequester ccpHttp = CcpInstanceInjection.getInstance(CcpHttpRequester.class);
+		CcpHttpRequester ccpHttp = CcpDependencyInjection.getDependency(CcpHttpRequester.class);
 
 		Long chatId = parameters.getAsLongNumber("chatId");
 		String url = this.getCompleteUrl(parameters);
