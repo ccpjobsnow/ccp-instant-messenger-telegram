@@ -30,7 +30,7 @@ class InstantMessengerTelegram implements CcpInstantMessenger {
 
 		Long chatId = parameters.getAsLongNumber("chatId");
 		String url = this.getCompleteUrl(parameters);
-		ccpHttp.executeHttpRequest(url + "/getChatMemberCount?chat_id=" + chatId, "GET", CcpConstants.EMPTY_JSON, "");
+		ccpHttp.executeHttpRequest(url + "/getChatMemberCount?chat_id=" + chatId, "GET", CcpConstants.EMPTY_JSON, "", 200);
 		CcpHttpHandler ccpHttpHandler = new CcpHttpHandler(200);
 		try {
 			CcpMapDecorator response = ccpHttpHandler.executeHttpSimplifiedGet(url, CcpHttpResponseType.singleRecord);
