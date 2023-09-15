@@ -21,7 +21,7 @@ class InstantMessengerTelegram implements CcpInstantMessenger {
 	private CcpMapDecorator properties;
 
 	public InstantMessengerTelegram() {
-		this.properties = new CcpStringDecorator("application.properties").propertiesFileFromClassLoader();
+		this.properties = new CcpStringDecorator("application.properties").propertiesFileFromFile();
 	}
 	
 	@Override
