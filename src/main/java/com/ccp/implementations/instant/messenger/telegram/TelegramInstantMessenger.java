@@ -11,17 +11,17 @@ import com.ccp.especifications.http.CcpHttpHandler;
 import com.ccp.especifications.http.CcpHttpRequester;
 import com.ccp.especifications.http.CcpHttpResponseType;
 import com.ccp.especifications.instant.messenger.CcpInstantMessenger;
-import com.ccp.exceptions.commons.ThrowException;
 import com.ccp.exceptions.http.CcpHttpError;
-import com.ccp.exceptions.instant.messenger.ThisBotWasBlockedByThisUser;
-import com.ccp.exceptions.instant.messenger.TooManyRequests;
+import com.ccp.exceptions.instant.messenger.CcpThisBotWasBlockedByThisUser;
+import com.ccp.exceptions.instant.messenger.CcpTooManyRequests;
+import com.ccp.exceptions.process.CcpThrowException;
 
-class InstantMessengerTelegram implements CcpInstantMessenger {
+class TelegramInstantMessenger implements CcpInstantMessenger {
 	
 	private CcpMapDecorator properties;
 
-	public InstantMessengerTelegram() {
-		this.properties = new CcpStringDecorator("application.properties").propertiesFileFromFile();
+	public TelegramInstantMessenger() {
+		this.properties = new CcpStringDecorator("application.properties").propertiesFrom().environmentVariablesOrClassLoaderOrFile();
 	}
 	
 	@Override
@@ -45,11 +45,11 @@ class InstantMessengerTelegram implements CcpInstantMessenger {
 		}
 	}
 	void throwThisBotWasBlockedByThisUser(String token) {
-		throw new ThisBotWasBlockedByThisUser(token);
+		throw new CcpThisBotWasBlockedByThisUser(token);
 	}
 	
 	void throwTooManyRequests() {
-		throw new TooManyRequests();
+		throw new CcpTooManyRequests();
 	}
 	public CcpMapDecorator sendMessage(CcpMapDecorator parameters) {
 		String token = this.getToken(parameters);
@@ -81,8 +81,8 @@ class InstantMessengerTelegram implements CcpInstantMessenger {
 		String method = parameters.getAsString("method");
 		
 		CcpMapDecorator handlers = new CcpMapDecorator()
-				.put("403", new ThrowException(new ThisBotWasBlockedByThisUser(token)))
-				.put("429", new ThrowException(new TooManyRequests()))
+				.put("403", new CcpThrowException(new CcpThisBotWasBlockedByThisUser(token)))
+				.put("429", new CcpThrowException(new CcpTooManyRequests()))
 				.put("200", CcpConstants.DO_NOTHING)
 				;
 		
