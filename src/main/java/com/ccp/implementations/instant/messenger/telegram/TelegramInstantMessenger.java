@@ -4,7 +4,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 import com.ccp.constantes.CcpConstants;
-import com.ccp.decorators.CcpMapDecorator;
+import com.ccp.decorators.CcpJsonRepresentation;
 import com.ccp.decorators.CcpStringDecorator;
 import com.ccp.dependency.injection.CcpDependencyInjection;
 import com.ccp.especifications.http.CcpHttpHandler;
@@ -18,14 +18,14 @@ import com.ccp.exceptions.process.CcpThrowException;
 
 class TelegramInstantMessenger implements CcpInstantMessenger {
 	
-	private CcpMapDecorator properties;
+	private CcpJsonRepresentation properties;
 
 	public TelegramInstantMessenger() {
 		this.properties = new CcpStringDecorator("application.properties").propertiesFrom().environmentVariablesOrClassLoaderOrFile();
 	}
 	
 	@Override
-	public Long getMembersCount(CcpMapDecorator parameters) {
+	public Long getMembersCount(CcpJsonRepresentation parameters) {
 		CcpHttpRequester ccpHttp = CcpDependencyInjection.getDependency(CcpHttpRequester.class);
 
 		Long chatId = parameters.getAsLongNumber("chatId");
@@ -33,7 +33,7 @@ class TelegramInstantMessenger implements CcpInstantMessenger {
 		ccpHttp.executeHttpRequest(url + "/getChatMemberCount?chat_id=" + chatId, "GET", CcpConstants.EMPTY_JSON, "", 200);
 		CcpHttpHandler ccpHttpHandler = new CcpHttpHandler(200);
 		try {
-			CcpMapDecorator response = ccpHttpHandler.executeHttpSimplifiedGet(url, CcpHttpResponseType.singleRecord);
+			CcpJsonRepresentation response = ccpHttpHandler.executeHttpSimplifiedGet(url, CcpHttpResponseType.singleRecord);
 			if(response.getAsBoolean("ok") == false) {
 				throw new RuntimeException("Erro ao contar membros do grupo " + chatId);
 			}
@@ -51,7 +51,7 @@ class TelegramInstantMessenger implements CcpInstantMessenger {
 	void throwTooManyRequests() {
 		throw new CcpTooManyRequests();
 	}
-	public CcpMapDecorator sendMessage(CcpMapDecorator parameters) {
+	public CcpJsonRepresentation sendMessage(CcpJsonRepresentation parameters) {
 		String token = this.getToken(parameters);
 
 //		this.throwTooManyRequests();
@@ -62,7 +62,7 @@ class TelegramInstantMessenger implements CcpInstantMessenger {
 		Long replyTo = parameters.containsAllKeys("replyTo") ? parameters.getAsLongNumber("replyTo") : 0L;
 
 		if(message.trim().isEmpty()) {
-			return new CcpMapDecorator();
+			return CcpConstants.EMPTY_JSON;
 		}
 
 		String mensagem = message.replace("<p>", "\n").replace("</p>", " ").replace(",<br/>", " ");
@@ -80,7 +80,7 @@ class TelegramInstantMessenger implements CcpInstantMessenger {
 		String url = botUrl + "/sendMessage";
 		String method = parameters.getAsString("method");
 		
-		CcpMapDecorator handlers = new CcpMapDecorator()
+		CcpJsonRepresentation handlers = CcpConstants.EMPTY_JSON
 				.put("403", new CcpThrowException(new CcpThisBotWasBlockedByThisUser(token)))
 				.put("429", new CcpThrowException(new CcpTooManyRequests()))
 				.put("200", CcpConstants.DO_NOTHING)
@@ -89,24 +89,24 @@ class TelegramInstantMessenger implements CcpInstantMessenger {
 		CcpHttpHandler ccpHttpHandler = new CcpHttpHandler(handlers);
 		
 		for (String text : texts) {
-			CcpMapDecorator body = new CcpMapDecorator()
+			CcpJsonRepresentation body = CcpConstants.EMPTY_JSON
 					.put("reply_to_message_id", replyTo)
 					.put("parse_mode", "html")
 					.put("chat_id", chatId)
 					.put("text", text);
 			
-			CcpMapDecorator response = ccpHttpHandler.executeHttpRequest(url, method, new CcpMapDecorator(), body, CcpHttpResponseType.singleRecord);
+			CcpJsonRepresentation response = ccpHttpHandler.executeHttpRequest(url, method, CcpConstants.EMPTY_JSON, body, CcpHttpResponseType.singleRecord);
 			
-			CcpMapDecorator result = response.getInternalMap("result");
+			CcpJsonRepresentation result = response.getInnerJson("result");
 			
 			replyTo = result.getAsLongNumber("message_id");
 		}
 		
-		return new CcpMapDecorator().put("token", token);
+		return CcpConstants.EMPTY_JSON.put("token", token);
 	}
 
 
-	private String getCompleteUrl(CcpMapDecorator parameters) {
+	private String getCompleteUrl(CcpJsonRepresentation parameters) {
 		
 		String tokenValue = this.getToken(parameters);
 		
@@ -116,7 +116,7 @@ class TelegramInstantMessenger implements CcpInstantMessenger {
 		return urlValue + tokenValue;
 	}
 
-	public String getToken(CcpMapDecorator parameters) {
+	public String getToken(CcpJsonRepresentation parameters) {
 		String tokenKey = parameters.getAsString("token");
 		String tokenValue = this.properties.getAsString(tokenKey);
 		return tokenValue;
@@ -124,7 +124,7 @@ class TelegramInstantMessenger implements CcpInstantMessenger {
 
 
 	@Override
-	public String getFileName(CcpMapDecorator parameters) {
+	public String getFileName(CcpJsonRepresentation parameters) {
 		
 //		CcpMapDecorator messageData = parameters.getInternalMap("messageData");
 //		String botToken = parameters.getAsString("botToken");
@@ -133,7 +133,7 @@ class TelegramInstantMessenger implements CcpInstantMessenger {
 	}
 
 	@Override
-	public String extractTextFromMessage(CcpMapDecorator parameters) {
+	public String extractTextFromMessage(CcpJsonRepresentation parameters) {
 //		CcpMapDecorator messageData = parameters.getInternalMap("messageData");
 //		String botToken = parameters.getAsString("botToken");
 
