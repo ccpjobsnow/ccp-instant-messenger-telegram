@@ -21,7 +21,7 @@ class TelegramInstantMessenger implements CcpInstantMessenger {
 	private CcpJsonRepresentation properties;
 
 	public TelegramInstantMessenger() {
-		this.properties = new CcpStringDecorator("application.properties").propertiesFrom().environmentVariablesOrClassLoaderOrFile();
+		this.properties = new CcpStringDecorator("application_properties").propertiesFrom().environmentVariablesOrClassLoaderOrFile();
 	}
 	
 	@Override
