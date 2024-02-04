@@ -4,7 +4,7 @@ import com.ccp.dependency.injection.CcpInstanceProvider;;
 
 public class CcpTelegramInstantMessenger implements CcpInstanceProvider {
 
-	@Override
+	
 	public Object getInstance() {
 		return new TelegramInstantMessenger();
 	}

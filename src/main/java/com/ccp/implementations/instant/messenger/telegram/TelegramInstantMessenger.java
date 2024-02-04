@@ -24,7 +24,7 @@ class TelegramInstantMessenger implements CcpInstantMessenger {
 		this.properties = new CcpStringDecorator("application_properties").propertiesFrom().environmentVariablesOrClassLoaderOrFile();
 	}
 	
-	@Override
+	
 	public Long getMembersCount(CcpJsonRepresentation parameters) {
 		CcpHttpRequester ccpHttp = CcpDependencyInjection.getDependency(CcpHttpRequester.class);
 
@@ -123,7 +123,7 @@ class TelegramInstantMessenger implements CcpInstantMessenger {
 	}
 
 
-	@Override
+	
 	public String getFileName(CcpJsonRepresentation parameters) {
 		
 //		CcpMapDecorator messageData = parameters.getInternalMap("messageData");
@@ -132,7 +132,7 @@ class TelegramInstantMessenger implements CcpInstantMessenger {
 		return null;
 	}
 
-	@Override
+	
 	public String extractTextFromMessage(CcpJsonRepresentation parameters) {
 //		CcpMapDecorator messageData = parameters.getInternalMap("messageData");
 //		String botToken = parameters.getAsString("botToken");
