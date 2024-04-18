@@ -18,13 +18,6 @@ import com.ccp.exceptions.process.CcpThrowException;
 
 class TelegramInstantMessenger implements CcpInstantMessenger {
 	
-	private CcpJsonRepresentation properties;
-
-	public TelegramInstantMessenger() {
-		this.properties = new CcpStringDecorator("application_properties").propertiesFrom().environmentVariablesOrClassLoaderOrFile();
-	}
-	
-	
 	public Long getMembersCount(CcpJsonRepresentation parameters) {
 		CcpHttpRequester ccpHttp = CcpDependencyInjection.getDependency(CcpHttpRequester.class);
 
@@ -107,18 +100,19 @@ class TelegramInstantMessenger implements CcpInstantMessenger {
 
 
 	private String getCompleteUrl(CcpJsonRepresentation parameters) {
-		
+		CcpJsonRepresentation properties = new CcpStringDecorator("application_properties").propertiesFrom().environmentVariablesOrClassLoaderOrFile();	
 		String tokenValue = this.getToken(parameters);
 		
 		String urlKey = parameters.getAsString("url");
-		String urlValue = this.properties.getAsString(urlKey);
+		String urlValue = properties.getAsString(urlKey);
 		
 		return urlValue + tokenValue;
 	}
 
 	public String getToken(CcpJsonRepresentation parameters) {
+		CcpJsonRepresentation properties = new CcpStringDecorator("application_properties").propertiesFrom().environmentVariablesOrClassLoaderOrFile();	
 		String tokenKey = parameters.getAsString("token");
-		String tokenValue = this.properties.getAsString(tokenKey);
+		String tokenValue = properties.getAsString(tokenKey);
 		return tokenValue;
 	}
 
