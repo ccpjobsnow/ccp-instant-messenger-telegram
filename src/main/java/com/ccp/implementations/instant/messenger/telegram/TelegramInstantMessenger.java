@@ -26,7 +26,7 @@ class TelegramInstantMessenger implements CcpInstantMessenger {
 		ccpHttp.executeHttpRequest(url + "/getChatMemberCount?chat_id=" + chatId, "GET", CcpConstants.EMPTY_JSON, "", 200);
 		CcpHttpHandler ccpHttpHandler = new CcpHttpHandler(200);
 		try {
-			CcpJsonRepresentation response = ccpHttpHandler.executeHttpSimplifiedGet(url, CcpHttpResponseType.singleRecord);
+			CcpJsonRepresentation response = ccpHttpHandler.executeHttpSimplifiedGet("getMembersCount", url, CcpHttpResponseType.singleRecord);
 			if(response.getAsBoolean("ok") == false) {
 				throw new RuntimeException("Erro ao contar membros do grupo " + chatId);
 			}
@@ -88,7 +88,7 @@ class TelegramInstantMessenger implements CcpInstantMessenger {
 					.put("chat_id", chatId)
 					.put("text", text);
 			
-			CcpJsonRepresentation response = ccpHttpHandler.executeHttpRequest(url, method, CcpConstants.EMPTY_JSON, body, CcpHttpResponseType.singleRecord);
+			CcpJsonRepresentation response = ccpHttpHandler.executeHttpRequest("sendInstantMessage", url, method, CcpConstants.EMPTY_JSON, body, CcpHttpResponseType.singleRecord);
 			
 			CcpJsonRepresentation result = response.getInnerJson("result");
 			
