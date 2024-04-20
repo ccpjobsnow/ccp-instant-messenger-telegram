@@ -113,6 +113,9 @@ class TelegramInstantMessenger implements CcpInstantMessenger {
 		CcpJsonRepresentation properties = new CcpStringDecorator("application_properties").propertiesFrom().environmentVariablesOrClassLoaderOrFile();	
 		String tokenKey = parameters.getAsString("token");
 		String tokenValue = properties.getAsString(tokenKey);
+		if(tokenValue.trim().isEmpty()) {
+			return tokenKey;
+		}
 		return tokenValue;
 	}
 
