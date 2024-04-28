@@ -126,7 +126,7 @@ class TelegramInstantMessenger implements CcpInstantMessenger {
 //		CcpMapDecorator messageData = parameters.getInternalMap("messageData");
 //		String botToken = parameters.getAsString("botToken");
 		
-		return null;
+		return "";
 	}
 
 	
@@ -134,7 +134,7 @@ class TelegramInstantMessenger implements CcpInstantMessenger {
 //		CcpMapDecorator messageData = parameters.getInternalMap("messageData");
 //		String botToken = parameters.getAsString("botToken");
 
-		return null;
+		return "";
 	}
 
 	
