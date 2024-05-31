@@ -76,7 +76,7 @@ class TelegramInstantMessenger implements CcpInstantMessenger {
 		CcpJsonRepresentation handlers = CcpConstants.EMPTY_JSON
 				.put("403", new CcpThrowException(new CcpThisBotWasBlockedByThisUser(token)))
 				.put("429", new CcpThrowException(new CcpTooManyRequests()))
-				.put("200", CcpConstants.DO_BY_PASS)
+				.put("200", CcpConstants.DO_NOTHING)
 				;
 		
 		CcpHttpHandler ccpHttpHandler = new CcpHttpHandler(handlers);
