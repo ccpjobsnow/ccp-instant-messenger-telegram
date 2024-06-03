@@ -52,7 +52,7 @@ class TelegramInstantMessenger implements CcpInstantMessenger {
 		Long chatId = parameters.getAsLongNumber("recipient");
 		
 		String message = parameters.getAsString("message");
-		Long replyTo = parameters.containsAllKeys("replyTo") ? parameters.getAsLongNumber("replyTo") : 0L;
+		Long replyTo = parameters.containsAllFields("replyTo") ? parameters.getAsLongNumber("replyTo") : 0L;
 
 		if(message.trim().isEmpty()) {
 			return CcpConstants.EMPTY_JSON;
@@ -74,9 +74,9 @@ class TelegramInstantMessenger implements CcpInstantMessenger {
 		String method = parameters.getAsString("method");
 		
 		CcpJsonRepresentation handlers = CcpConstants.EMPTY_JSON
-				.put("403", new CcpThrowException(new CcpThisBotWasBlockedByThisUser(token)))
-				.put("429", new CcpThrowException(new CcpTooManyRequests()))
-				.put("200", CcpConstants.DO_NOTHING)
+				.addJsonTransformer("403", new CcpThrowException(new CcpThisBotWasBlockedByThisUser(token)))
+				.addJsonTransformer("429", new CcpThrowException(new CcpTooManyRequests()))
+				.addJsonTransformer("200", CcpConstants.DO_NOTHING)
 				;
 		
 		CcpHttpHandler ccpHttpHandler = new CcpHttpHandler(handlers);
