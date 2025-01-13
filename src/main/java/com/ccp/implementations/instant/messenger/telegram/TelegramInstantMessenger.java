@@ -1,7 +1,9 @@
 package com.ccp.implementations.instant.messenger.telegram;
 
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.List;
+import java.util.Set;
 
 import com.ccp.constantes.CcpOtherConstants;
 import com.ccp.decorators.CcpJsonRepresentation;
@@ -12,7 +14,7 @@ import com.ccp.especifications.http.CcpHttpRequester;
 import com.ccp.especifications.http.CcpHttpResponseType;
 import com.ccp.especifications.instant.messenger.CcpInstantMessenger;
 import com.ccp.exceptions.http.CcpHttpError;
-import com.ccp.exceptions.instant.messenger.CcpThisBotWasBlockedByThisUser;
+import com.ccp.exceptions.instant.messenger.CcpInstantMessageThisBotWasBlockedByThisUser;
 import com.ccp.exceptions.instant.messenger.CcpTooManyRequests;
 import com.ccp.exceptions.process.CcpThrowException;
 
@@ -38,43 +40,61 @@ class TelegramInstantMessenger implements CcpInstantMessenger {
 		}
 	}
 	void throwThisBotWasBlockedByThisUser(String token) {
-		throw new CcpThisBotWasBlockedByThisUser(token);
+		throw new CcpInstantMessageThisBotWasBlockedByThisUser(token);
 	}
 	
 	void throwTooManyRequests() {
 		throw new CcpTooManyRequests();
 	}
-	public CcpJsonRepresentation sendMessage(CcpJsonRepresentation parameters) {
-		String token = this.getToken(parameters);
-
+	public CcpJsonRepresentation sendMessage(CcpJsonRepresentation json) {
+		String token = this.getToken(json);
+		
 //		this.throwTooManyRequests();
 //		this.throwThisBotWasBlockedByThisUser(token);
-		Long chatId = parameters.getAsLongNumber("recipient");
-		
-		String message = parameters.getAsString("message");
-		Long replyTo = parameters.containsAllFields("replyTo") ? parameters.getAsLongNumber("replyTo") : 0L;
+		Long chatId = json.getAsLongNumber("recipient");
+		Set<String> fieldSet = json.fieldSet();
+		for (String fieldName : fieldSet) {
+			Object value = json.get(fieldName);
+			if(value instanceof Collection<?>) {
+				json = json.put(fieldName, value.toString());
+			}
+		}
+		String message = json.getAsString("message")
+				.replace("\u003cBR\u003e", "\n")
+				.replace("\u003cbr\u003e", "\n")
+				.replace("<BR/>", "\n")
+				.replace("<br/>", "\n")
+				.replace("<BR>", "\n")
+				.replace("<br>", "\n")
+				.replace("u003c", "(")
+				.replace("u003e", ")")
+				.replace("<p>", "\n")
+				.replace("</p>", " ")
+				.replace("<", "(")
+				.replace(">", ")")
+				;
+		Long replyTo =  json.getOrDefault("replyTo", 0L);
 
 		if(message.trim().isEmpty()) {
 			return CcpOtherConstants.EMPTY_JSON;
 		}
 
-		String mensagem = message.replace("<p>", "\n").replace("</p>", " ").replace(",<br/>", " ");
 		List<String> texts = new ArrayList<>();
-		int length = mensagem.length();
+		int length = message.length();
 		int pieces = length / 4096;
 		
 		for(int k = 0; k <= pieces; k++) {
 			int nextBound = (k + 1) * 4096;
 			int currentBound = k * 4096;
-			String text = mensagem.substring(currentBound, nextBound > length ? length : nextBound);
+			String text = message.substring(currentBound, nextBound > length ? length : nextBound);
 			texts.add(text);
 		}
-		String botUrl = this.getCompleteUrl(parameters);
+		String botUrl = this.getCompleteUrl(json);
 		String url = botUrl + "/sendMessage";
-		String method = parameters.getAsString("method");
+		String method = json.getAsString("method");
 		
 		CcpJsonRepresentation handlers = CcpOtherConstants.EMPTY_JSON
-				.addJsonTransformer("403", new CcpThrowException(new CcpThisBotWasBlockedByThisUser(token)))
+				.addJsonTransformer("403", new CcpThrowException(new CcpInstantMessageThisBotWasBlockedByThisUser(token)))
 				.addJsonTransformer("429", new CcpThrowException(new CcpTooManyRequests()))
 				.addJsonTransformer("200", CcpOtherConstants.DO_NOTHING)
 				;
@@ -95,7 +115,9 @@ class TelegramInstantMessenger implements CcpInstantMessenger {
 			replyTo = result.getAsLongNumber("message_id");
 		}
 		
-		return CcpOtherConstants.EMPTY_JSON.put("token", token);
+		return CcpOtherConstants.EMPTY_JSON
+//				.put("token", token)
+				;
 	}
 
 
