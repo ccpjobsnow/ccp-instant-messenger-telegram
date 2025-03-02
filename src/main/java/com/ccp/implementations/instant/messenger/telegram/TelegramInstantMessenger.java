@@ -39,11 +39,11 @@ class TelegramInstantMessenger implements CcpInstantMessenger {
 			throw new RuntimeException("Erro ao contar membros do grupo " + chatId + ". Detalhes: " + e.getMessage());
 		}
 	}
-	void throwThisBotWasBlockedByThisUser(String token) {
+	CcpInstantMessenger throwThisBotWasBlockedByThisUser(String token) {
 		throw new CcpInstantMessageThisBotWasBlockedByThisUser(token);
 	}
 	
-	void throwTooManyRequests() {
+	CcpInstantMessenger throwTooManyRequests() {
 		throw new CcpTooManyRequests();
 	}
 	public CcpJsonRepresentation sendMessage(CcpJsonRepresentation json) {
