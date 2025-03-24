@@ -13,10 +13,11 @@ import com.ccp.especifications.http.CcpHttpHandler;
 import com.ccp.especifications.http.CcpHttpRequester;
 import com.ccp.especifications.http.CcpHttpResponseType;
 import com.ccp.especifications.instant.messenger.CcpInstantMessenger;
-import com.ccp.exceptions.http.CcpHttpError;
+import com.ccp.exceptions.db.instant.messenger.CcpInstantMessengerChatErrorCount;
 import com.ccp.exceptions.instant.messenger.CcpInstantMessageThisBotWasBlockedByThisUser;
 import com.ccp.exceptions.instant.messenger.CcpTooManyRequests;
-import com.ccp.exceptions.process.CcpThrowException;
+import com.ccp.http.CcpHttpMethods;
+import com.ccp.process.CcpThrowException;
 
 class TelegramInstantMessenger implements CcpInstantMessenger {
 	
@@ -25,19 +26,15 @@ class TelegramInstantMessenger implements CcpInstantMessenger {
 
 		Long chatId = parameters.getAsLongNumber("chatId");
 		String url = this.getCompleteUrl(parameters);
-		ccpHttp.executeHttpRequest(url + "/getChatMemberCount?chat_id=" + chatId, "GET", CcpOtherConstants.EMPTY_JSON, "", 200);
+		ccpHttp.executeHttpRequest(url + "/getChatMemberCount?chat_id=" + chatId, CcpHttpMethods.GET, CcpOtherConstants.EMPTY_JSON, "", 200);
 		CcpHttpHandler ccpHttpHandler = new CcpHttpHandler(200);
-		try {
-			CcpJsonRepresentation response = ccpHttpHandler.executeHttpSimplifiedGet("getMembersCount", url, CcpHttpResponseType.singleRecord);
-			if(response.getAsBoolean("ok") == false) {
-				throw new RuntimeException("Erro ao contar membros do grupo " + chatId);
-			}
-			Long result = response.getAsLongNumber("result");
-			return result;
-			
-		} catch (CcpHttpError e) {
-			throw new RuntimeException("Erro ao contar membros do grupo " + chatId + ". Detalhes: " + e.getMessage());
+
+		CcpJsonRepresentation response = ccpHttpHandler.executeHttpSimplifiedGet("getMembersCount", url, CcpHttpResponseType.singleRecord);
+		if(response.getAsBoolean("ok") == false) {
+			throw new CcpInstantMessengerChatErrorCount(chatId);
 		}
+		Long result = response.getAsLongNumber("result");
+		return result;
 	}
 	CcpInstantMessenger throwThisBotWasBlockedByThisUser(String token) {
 		throw new CcpInstantMessageThisBotWasBlockedByThisUser(token);
@@ -91,7 +88,7 @@ class TelegramInstantMessenger implements CcpInstantMessenger {
 		}
 		String botUrl = this.getCompleteUrl(json);
 		String url = botUrl + "/sendMessage";
-		String method = json.getAsString("method");
+		CcpHttpMethods method = CcpHttpMethods.valueOf( json.getAsString("method"));
 		
 		CcpJsonRepresentation handlers = CcpOtherConstants.EMPTY_JSON
 				.addJsonTransformer("403", new CcpThrowException(new CcpInstantMessageThisBotWasBlockedByThisUser(token)))
